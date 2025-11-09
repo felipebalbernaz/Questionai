@@ -603,19 +603,6 @@ rag.buscar_habilidades_avancada("probabilidade", {"unidade_tematica": "Estatíst
 - [ChromaDB Documentation](https://docs.trychroma.com/)
 - [BNCC - Base Nacional Comum Curricular](http://basenacionalcomum.mec.gov.br/)
 
----
-
-## 📄 Licença
-
-[Especificar licença do projeto]
-
----
-
-## 👥 Contribuindo
-
-[Instruções para contribuição]
-
----
 
 ## 🌟 Sobre o KORA
 
