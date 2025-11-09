@@ -752,13 +752,28 @@ class AgentService:
                 return float(m[0]) if m else None
             except Exception:
                 return None
+
+        def _extract_unit(x: str) -> str:
+            """Extrai a unidade de uma resposta (ex: 'km²', 'm³', 'cm', etc.)"""
+            # Remove números, espaços, vírgulas, pontos
+            cleaned = re.sub(r'[-+]?[0-9]*\.?[0-9]+', '', str(x))
+            cleaned = cleaned.strip().strip(',').strip('.')
+            return cleaned if cleaned else ""
+
         if len(candidatos) < n:
             base_n = _num(resposta_final)
             extras: List[str] = []
             if base_n is not None:
-                # Gera perturbações numéricas
+                # Extrai unidade da resposta original
+                unit = _extract_unit(str(resposta_final))
+                # Gera perturbações numéricas PRESERVANDO a unidade
                 for mult in [0.9, 1.1, 0.8, 1.2, 0.95, 1.05]:
-                    extras.append(str(round(base_n*mult, 3)))
+                    new_val = round(base_n * mult, 3)
+                    # Adiciona unidade se existir
+                    if unit:
+                        extras.append(f"{new_val} {unit}")
+                    else:
+                        extras.append(str(new_val))
             else:
                 # Gera variações textuais simples
                 rf = str(resposta_final).strip()
@@ -816,17 +831,26 @@ class AgentService:
         return alt_map, letra_certa
 
     async def _completar_e_embaralhar_alternativas(self, questoes: List[Dict[str, Any]], gabarito: Dict[str, Any]) -> Dict[str, Any]:
-        """Garante que cada item do gabarito tenha 5 alternativas (A–E) com a correta embaralhada."""
+        """Garante que cada item do gabarito tenha 5 alternativas (A–E) com a correta embaralhada.
+        TAMBÉM adiciona as alternativas às questões para o Streamlit."""
+        logger.info(f"Completando alternativas para {len(questoes)} questões")
         if not isinstance(gabarito, dict) or not isinstance(gabarito.get("gabarito"), list):
+            logger.warning("Gabarito inválido, pulando geração de alternativas")
             return gabarito
         itens = gabarito.get("gabarito", [])
+        logger.info(f"Gabarito tem {len(itens)} itens")
+
         for idx, item in enumerate(itens):
             try:
                 alt_map = item.get("alternativas") or {}
                 tem_5 = isinstance(alt_map, dict) and len(alt_map.keys()) >= 5
                 resp_correta = item.get("resposta_final", "")
+                logger.info(f"Questão {idx+1}: tem_5={tem_5}, resposta_correta='{resp_correta}'")
+
                 if not resp_correta:
+                    logger.warning(f"Questão {idx+1}: sem resposta_final, pulando")
                     continue
+
                 if not tem_5:
                     # Gera distratores
                     enun = None
@@ -834,10 +858,22 @@ class AgentService:
                         enun = (questoes[idx] or {}).get("enunciado")
                     if not enun:
                         enun = item.get("questao", "")
+
+                    logger.info(f"Questão {idx+1}: gerando 4 distratores para '{resp_correta}'")
                     distr = await self.gerar_distratores(enun or "", resp_correta, n=4)
+                    logger.info(f"Questão {idx+1}: distratores gerados: {distr}")
+
                     alt_map, letra = self._embaralhar_alternativas(resp_correta, distr)
+                    logger.info(f"Questão {idx+1}: alternativas embaralhadas, correta={letra}")
+
                     item["alternativas"] = alt_map
                     item["alternativa_correta_letra"] = letra
+
+                    # ADICIONA alternativas à questão correspondente
+                    if idx < len(questoes):
+                        questoes[idx]["alternativas"] = alt_map
+                        questoes[idx]["alternativa_correta_letra"] = letra
+                        logger.info(f"Questão {idx+1}: alternativas adicionadas à questão")
                 else:
                     # Já existe, apenas normaliza letra
                     letra = item.get("alternativa_correta_letra")
@@ -846,8 +882,18 @@ class AgentService:
                         alvo = str(resp_correta).strip().lower()
                         letra = next((L for L, v in alt_map.items() if str(v).strip().lower() == alvo), "A")
                         item["alternativa_correta_letra"] = letra
+
+                    # ADICIONA alternativas à questão correspondente
+                    if idx < len(questoes):
+                        questoes[idx]["alternativas"] = alt_map
+                        questoes[idx]["alternativa_correta_letra"] = letra
+                        logger.info(f"Questão {idx+1}: alternativas já existentes adicionadas à questão")
             except Exception as e:
                 logger.warning(f"Falha ao completar alternativas do item {idx+1}: {e}")
+                import traceback
+                logger.warning(traceback.format_exc())
+
+        logger.info("Completamento de alternativas finalizado")
         return gabarito
 
 

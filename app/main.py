@@ -1,5 +1,5 @@
 """
-Aplicação principal FastAPI - BNCC-Gen
+Aplicação principal FastAPI - KORA
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,27 +21,30 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="""
-    ## 🎓 BNCC-Gen - Sistema Multiagente de Questões Educacionais
-    
-    Sistema de IA para gerar listas de exercícios personalizadas baseadas na BNCC.
-    
+    ## 🎓 KORA - Plataforma de Apoio Pedagógico para Cursinhos Populares
+
+    Plataforma multiagente de IA para apoiar professores voluntários e coordenadores de
+    cursinhos populares e projetos de extensão universitária.
+
     ### Funcionalidades:
-    
-    * **Análise Inteligente**: Identifica habilidades BNCC em questões
-    * **Geração de Questões**: Cria questões similares automaticamente
-    * **Correção Automática**: Corrige respostas e fornece feedback pedagógico
-    * **Relatório Diagnóstico**: Identifica pontos fortes e áreas a melhorar
-    
+
+    * **Análise Inteligente**: Identifica habilidades BNCC em questões-exemplo
+    * **Geração de Questões MC**: Cria 3 questões múltipla escolha (A-E) estilo ENEM
+    * **Validação Adversarial**: Garante que questões sejam solucionáveis
+    * **Correção Automática**: Corrige respostas e fornece feedback pedagógico detalhado
+    * **Relatório Diagnóstico**: Métricas, habilidades BNCC e recomendações personalizadas
+
     ### Fluxo de Uso:
-    
-    1. **POST /api/v1/session/start**: Envia questão original, recebe lista de questões
-    2. **POST /api/v1/session/{session_id}/submit**: Envia respostas, recebe relatório
-    
+
+    1. **POST /api/v1/session/start**: Envia questão-exemplo, recebe 3 questões MC
+    2. **GET /api/v1/session/{session_id}**: Consulta sessão e questões
+    3. **POST /api/v1/session/{session_id}/submit**: Envia respostas, recebe relatório diagnóstico
+
     ### Tecnologias:
-    
+
     * FastAPI + LangChain
-    * OpenAI GPT-4
-    * ChromaDB (RAG)
+    * Google Gemini 2.5 Flash
+    * ChromaDB (RAG BNCC)
     * SQLite
     """,
     docs_url="/docs",
@@ -63,7 +66,7 @@ app.add_middleware(
 async def startup_event():
     """Evento executado ao iniciar a aplicação"""
     logger.info("=" * 60)
-    logger.info(f"Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(f"Iniciando KORA v{settings.APP_VERSION}")
     logger.info("=" * 60)
     
     # Inicializa o banco de dados

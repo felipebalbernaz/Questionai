@@ -92,7 +92,8 @@ async def start_session(
         logger.info("=== Sessão iniciada com sucesso ===")
         return SessionStartResponse(
             session_id=sessao.session_id,
-            lista_de_questoes=questoes_strings
+            lista_de_questoes=questoes_strings,
+            questoes_geradas=aprovadas  # Retorna objetos completos com alternativas
         )
         
     except Exception as e:
@@ -223,6 +224,7 @@ async def get_session(
         "session_id": sessao.session_id,
         "questao_original": sessao.questao_original,
         "lista_questoes": sessao.lista_questoes,
+        "questoes_geradas": sessao.lista_questoes,  # Alias para compatibilidade com Streamlit
         "gabarito_mestre": sessao.gabarito_mestre,
         "habilidades_identificadas": sessao.habilidades_identificadas,
         "created_at": sessao.created_at,

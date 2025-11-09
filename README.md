@@ -1,8 +1,8 @@
-# 🎓 BNCC-Gen - Sistema Multiagente de Questões Educacionais
+# 🎓 KORA - Plataforma de Apoio Pedagógico para Cursinhos Populares
 
-Sistema multiagente de IA projetado para gerar listas de exercícios personalizadas baseadas na **Base Nacional Comum Curricular (BNCC)**. A partir de uma única questão-exemplo, o sistema identifica as habilidades da BNCC associadas e gera uma nova lista de estudo focada nesses objetivos pedagógicos.
+**KORA** é uma plataforma multiagente de IA desenvolvida para apoiar professores voluntários e coordenadores de cursinhos populares e projetos de extensão universitária. A partir de uma questão-exemplo, o sistema identifica as habilidades da **Base Nacional Comum Curricular (BNCC)** associadas, gera questões personalizadas em formato múltipla escolha (estilo ENEM) e fornece relatórios diagnósticos detalhados sobre o desempenho dos estudantes.
 
-Este documento descreve a arquitetura do **MVP (Minimum Viable Product)**, focado na lógica central dos agentes com **tool calling**, **RAG (Retrieval-Augmented Generation)** e **prompts modularizados**.
+A plataforma atende instituições não-lucrativas que frequentemente carecem de tecnologias avançadas de apoio pedagógico, oferecendo uma ferramenta de diagnóstico coletivo e suporte docente baseada em inteligência artificial.
 
 ---
 
@@ -23,7 +23,7 @@ Este documento descreve a arquitetura do **MVP (Minimum Viable Product)**, focad
 
 ## 🚀 1. Visão Geral e Arquitetura
 
-O sistema é construído como uma API **FastAPI** e orquestrado com **LangChain**. A principal característica da arquitetura é ser **baseada em sessões** para gerenciar o fluxo assíncrono do usuário (pedir questões e, horas depois, enviar respostas).
+**KORA** é uma plataforma B2B educacional construída como uma API **FastAPI** e orquestrada com **LangChain**. A arquitetura é **baseada em sessões** para permitir que professores criem atividades diagnósticas, os alunos respondam de forma assíncrona e os educadores recebam relatórios detalhados sobre o desempenho da turma.
 
 ### 1.1. Stack Tecnológica
 
@@ -37,36 +37,40 @@ O sistema é construído como uma API **FastAPI** e orquestrado com **LangChain*
 
 ### 1.2. Fluxo do Processo
 
-O MVP opera em dois estágios principais:
+A plataforma opera em dois estágios principais:
 
-1.  **Estágio 1: Criação da Sessão (`POST /api/v1/session/start`)**
+1.  **Estágio 1: Criação da Atividade Diagnóstica (`POST /api/v1/session/start`)**
 
-    1.  O usuário envia uma imagem da `Questão Original`.
-    2.  O `ocr_service` (mockado) "lê" a imagem e retorna um texto.
-    3.  O `Agente Interpretador` (com RAG-BNCC) analisa o texto e extrai as habilidades.
-    4.  O `Agente Criador` gera a `Lista de Questões` com base nessas habilidades.
-    5.  O `Agente Resolução` gera o `Gabarito Mestre` para essa lista.
-    6.  O `Gabarito Mestre` é **salvo no SQLite** associado a um novo `session_id`.
-    7.  A API retorna a `Lista de Questões` e o `session_id` para o usuário.
+    1.  O professor envia uma questão-exemplo (texto ou arquivo).
+    2.  O `Agente Interpretador` (com RAG-BNCC) analisa o texto e identifica as habilidades BNCC.
+    3.  O `Agente Criador` gera 3 questões múltipla escolha (A-E) baseadas nessas habilidades.
+    4.  O `Agente Resolução` resolve as questões de forma independente e gera o `Gabarito Mestre`.
+    5.  O `Agente Distratores` cria alternativas incorretas plausíveis para cada questão.
+    6.  O sistema valida que as questões são solucionáveis (validação adversarial).
+    7.  O `Gabarito Mestre` é **salvo no SQLite** associado a um novo `session_id`.
+    8.  A API retorna as questões com alternativas e o `session_id` para o professor.
 
-2.  **Estágio 2: Submissão e Correção (`POST /api/v1/session/{session_id}/submit`)**
+2.  **Estágio 2: Submissão e Relatório Diagnóstico (`POST /api/v1/session/{session_id}/submit`)**
 
-    1.  O usuário envia a imagem das suas `Respostas` e o `session_id`.
-    2.  O `ocr_service` (mockado) "lê" as respostas.
-    3.  O sistema **busca no SQLite** o `Gabarito Mestre` usando o `session_id`.
-    4.  O `Agente de Correção` compara as `Respostas` do aluno com o `Gabarito Mestre`.
-    5.  A API retorna o `Relatório Diagnóstico` final.
+    1.  Os alunos respondem as questões (A, B, C, D ou E) e o professor submete as respostas.
+    2.  O sistema **busca no SQLite** o `Gabarito Mestre` usando o `session_id`.
+    3.  O `Agente de Correção` compara as respostas dos alunos com o `Gabarito Mestre`.
+    4.  A API retorna um `Relatório Diagnóstico` detalhado com:
+        - Métricas de desempenho (acertos, erros, taxa de sucesso)
+        - Correção detalhada de cada questão
+        - Habilidades BNCC trabalhadas
+        - Recomendações pedagógicas personalizadas
 
 ## 📁 2. Estrutura do Projeto
 
 A arquitetura de pastas é organizada para separar responsabilidades (API, Lógica de Negócio, Banco de Dados, Prompts).
 
 ```
-bncc_gen_backend/
+cora/
 │
 ├── app/
 │   ├── api/v1/endpoints/
-│   │   └── session.py           # Rotas da API (/start e /submit)
+│   │   └── session.py           # Rotas da API (/start, /submit, GET)
 │   │
 │   ├── core/
 │   │   └── config.py            # Configurações (.env)
@@ -77,10 +81,9 @@ bncc_gen_backend/
 │   │   └── schemas.py           # Schemas Pydantic
 │   │
 │   ├── services/
-│   │   ├── agent_service.py     # Agentes com tool calling
+│   │   ├── agent_service.py     # Orquestração dos agentes
 │   │   ├── tools.py             # Ferramentas dos agentes
-│   │   ├── rag_service.py       # ChromaDB + retriever
-│   │   └── ocr_service.py       # Mock OCR
+│   │   └── rag_service.py       # ChromaDB + retriever BNCC
 │   │
 │   ├── prompts/                 # 📝 Sistema de prompts modularizado
 │   │   ├── prompt_loader.py     # Carregador de prompts
@@ -91,7 +94,9 @@ bncc_gen_backend/
 │   │   ├── agente_resolucao_system.txt
 │   │   ├── agente_resolucao_human.txt
 │   │   ├── agente_correcao_system.txt
-│   │   └── agente_correcao_human.txt
+│   │   ├── agente_correcao_human.txt
+│   │   ├── agente_distratores_system.txt
+│   │   └── agente_distratores_human.txt
 │   │
 │   └── main.py                  # FastAPI app
 │
@@ -105,12 +110,14 @@ bncc_gen_backend/
 │   └── BNCC 3ª Série - Matemática.json
 │
 ├── scripts/
-│   └── ingest_bncc.py           # Ingestão do RAG (executar 1x)
+│   ├── ingest_bncc.py           # Ingestão do RAG (executar 1x)
+│   └── run_backend_e2e_llm.py   # Teste end-to-end com LLMs reais
 │
 ├── chroma_db/                   # 🗄️ Banco vetorial (criado automaticamente)
 │   ├── chroma.sqlite3
 │   └── ...
 │
+├── streamlit_app.py             # 🎨 Interface Streamlit para testes
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
@@ -122,14 +129,14 @@ bncc_gen_backend/
 ### Pré-requisitos
 
 - Python 3.10+
-- Chaves de API (OpenAI, Google, etc.) para os LLMs que o LangChain usará
+- Chave de API do Google Gemini (modelo: `gemini-2.5-flash`)
 
 ### Passos de Instalação
 
 1. **Clonar o repositório:**
    ```bash
    git clone [URL_DO_SEU_REPOSITORIO]
-   cd bncc_gen_backend
+   cd cora
    ```
 
 2. **Criar e ativar um ambiente virtual:**
@@ -145,7 +152,12 @@ bncc_gen_backend/
 
 4. **Configurar variáveis de ambiente:**
    - Copie o `.env.example` para um novo arquivo chamado `.env`
-   - Preencha as chaves de API necessárias (ex: `OPENAI_API_KEY=...`)
+   - Preencha a chave de API do Google Gemini:
+     ```
+     GOOGLE_API_KEY=sua_chave_aqui
+     LLM_PROVIDER=google
+     LLM_MODEL=gemini-2.5-flash
+     ```
 
 5. **Ingerir dados da BNCC (OBRIGATÓRIO):**
    ```bash
@@ -164,10 +176,12 @@ bncc_gen_backend/
 
 ## ▶️ 4. Executando a Aplicação
 
-Com tudo configurado, inicie o servidor **Uvicorn**:
+### 4.1. Backend (API FastAPI)
+
+Inicie o servidor **Uvicorn**:
 
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 - `app.main`: Refere-se ao arquivo `app/main.py`
@@ -177,55 +191,124 @@ uvicorn app.main:app --reload
 **Servidor rodando em**: `http://127.0.0.1:8000`
 **Documentação interativa**: `http://127.0.0.1:8000/docs`
 
+### 4.2. Interface Streamlit (Opcional)
+
+Para testar a plataforma com interface gráfica:
+
+```bash
+streamlit run streamlit_app.py --server.port 8501
+```
+
+**Interface rodando em**: `http://localhost:8501`
+
+A interface Streamlit permite:
+- ✅ Criar atividades diagnósticas a partir de questões-exemplo
+- ✅ Visualizar as 3 questões geradas com alternativas A-E
+- ✅ Simular respostas de alunos
+- ✅ Visualizar relatórios diagnósticos detalhados
+
 ---
 
 ## 📖 5. Endpoints da API
 
 Documentação interativa (Swagger UI): **`http://127.0.0.1:8000/docs`**
 
-### 5.1. Iniciar Sessão de Estudo
+### 5.1. Criar Atividade Diagnóstica
 
 **Rota:** `POST /api/v1/session/start`
-**Body:** `form-data` com uma chave `file` (a imagem da questão)
+**Body:** `form-data` com uma chave `file` (arquivo de texto com a questão-exemplo)
 **Resposta (Sucesso 200):**
 
 ```json
 {
   "session_id": "a1b2-c3d4-e5f6-g7h8",
   "lista_de_questoes": [
-    "1. Nova questão gerada pelo Agente Criador...",
-    "2. Segunda questão similar...",
-    "3. Terceira questão com contexto variado...",
-    "4. Quarta questão aplicada..."
+    "1. Uma equipe de engenheiros projetou um reservatório...",
+    "2. Um arquiteto está planejando a construção de um jardim...",
+    "3. Para uma competição de matemática, os organizadores..."
+  ],
+  "questoes_geradas": [
+    {
+      "numero": 1,
+      "enunciado": "Uma equipe de engenheiros projetou um reservatório...",
+      "habilidades_combinadas": ["EF09MA08", "EF09MA03"],
+      "alternativas": {
+        "A": "125 m³",
+        "B": "150 m³",
+        "C": "175 m³",
+        "D": "200 m³",
+        "E": "225 m³"
+      }
+    }
   ]
 }
 ```
 
-### 5.2. Submeter Respostas e Obter Relatório
+### 5.2. Consultar Sessão
+
+**Rota:** `GET /api/v1/session/{session_id}`
+**Resposta (Sucesso 200):**
+
+```json
+{
+  "session_id": "a1b2-c3d4-e5f6-g7h8",
+  "questao_original": "O arquiteto Renzo Piano exibiu a maquete...",
+  "lista_questoes": [...],
+  "questoes_geradas": [...],
+  "gabarito_mestre": {...},
+  "habilidades_identificadas": {...},
+  "created_at": "2025-11-09T10:00:00",
+  "has_relatorio": false
+}
+```
+
+### 5.3. Submeter Respostas e Obter Relatório Diagnóstico
 
 **Rota:** `POST /api/v1/session/{session_id}/submit`
 **Parâmetro de URL:** `session_id` (o ID recebido no passo 1)
-**Body:** `form-data` com uma chave `file` (a imagem das respostas do aluno)
+**Body (JSON):**
+
+```json
+{
+  "respostas": {
+    "1": "A",
+    "2": "B",
+    "3": "C"
+  }
+}
+```
+
 **Resposta (Sucesso 200):**
 
 ```json
 {
   "session_id": "a1b2-c3d4-e5f6-g7h8",
   "relatorio_diagnostico": {
-    "resumo": "Você acertou 2 de 4 questões. O principal ponto de atenção é a aplicação da habilidade EM13MAT503 em contextos de função quadrática.",
+    "total_questoes": 3,
+    "acertos": 2,
+    "erros": 1,
+    "taxa_acerto": 66.67,
     "correcao_detalhada": [
       {
-        "questao": "1. Nova questão...",
-        "sua_resposta": "Resposta mockada do aluno...",
-        "gabarito_correto": "Gabarito mestre do Agente Resolução...",
-        "feedback": "Correto."
-      },
-      {
-        "questao": "2. Segunda questão...",
-        "sua_resposta": "Resposta mockada do aluno...",
-        "gabarito_correto": "Gabarito mestre...",
-        "feedback": "Incorreto. Você confundiu a fórmula do vértice..."
+        "numero": 1,
+        "questao": "Uma equipe de engenheiros...",
+        "resposta_aluno": "A",
+        "resposta_correta": "A",
+        "status": "correto",
+        "feedback": "Excelente! Você aplicou corretamente a fórmula do volume...",
+        "passos_resolucao": ["Passo 1: ...", "Passo 2: ..."]
       }
+    ],
+    "habilidades_trabalhadas": [
+      {
+        "codigo": "EF09MA08",
+        "habilidade": "Resolver e elaborar problemas que envolvam relações de proporcionalidade...",
+        "desempenho": "Bom"
+      }
+    ],
+    "recomendacoes": [
+      "Revisar conceitos de proporcionalidade direta e inversa",
+      "Praticar mais exercícios envolvendo escalas"
     ]
   }
 }
@@ -233,72 +316,88 @@ Documentação interativa (Swagger UI): **`http://127.0.0.1:8000/docs`**
 
 ---
 
-## 🤖 6. Sistema de Agentes com Tool Calling
+## 🤖 6. Sistema de Agentes Multiagente
 
-O BNCC-Gen utiliza uma arquitetura de **agentes inteligentes** baseada em **tool calling** do LangChain, onde cada agente tem acesso a ferramentas específicas para executar suas tarefas.
+**KORA** utiliza uma arquitetura de **5 agentes especializados** baseada em **LangChain** e **Google Gemini 2.5 Flash**, onde cada agente tem uma responsabilidade específica no pipeline de geração e correção de questões.
 
 ### 6.1. Arquitetura de Agentes
 
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                    PIPELINE MULTIAGENTE                      │
+└─────────────────────────────────────────────────────────────┘
+         │
+         ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Agente          │    │ Tools            │    │ Prompts         │
+│ 1. Agente       │    │ RAG ChromaDB     │    │ Prompts         │
 │ Interpretador   │◄──►│ • buscar_bncc    │    │ • system.txt    │
 │                 │    │ • buscar_conceito│    │ • human.txt     │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-         │
+         │ Identifica habilidades BNCC
          ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Agente          │    │ Tools            │    │ • system.txt    │
-│ Criador         │◄──►│ • buscar_bncc    │    │ • human.txt     │
+│ 2. Agente       │    │ Validação        │    │ • system.txt    │
+│ Criador         │◄──►│ Adversarial      │    │ • human.txt     │
+│                 │    │ (Solver valida)  │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │ Gera 3 questões MC (A-E)
+         ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ 3. Agente       │    │ Gabarito Mestre  │    │ • system.txt    │
+│ Resolução       │◄──►│ (independente)   │    │ • human.txt     │
 │                 │    │                  │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-         │
+         │ Resolve questões de forma independente
          ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Agente          │    │ Tools            │    │ • system.txt    │
-│ Resolução       │◄──►│ • salvar_gabarito│    │ • human.txt     │
-│                 │    │                  │    │                 │
+│ 4. Agente       │    │ Distratores      │    │ • system.txt    │
+│ Distratores     │◄──►│ Plausíveis       │    │ • human.txt     │
+│                 │    │ (4 por questão)  │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-         │
+         │ Gera alternativas incorretas plausíveis
          ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Agente          │    │ Tools            │    │ • system.txt    │
-│ Correção        │◄──►│ • recuperar_gab  │    │ • human.txt     │
-│                 │    │                  │    │                 │
+│ 5. Agente       │    │ Relatório        │    │ • system.txt    │
+│ Correção        │◄──►│ Diagnóstico      │    │ • human.txt     │
+│                 │    │ Detalhado        │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-### 6.2. Ferramentas (Tools) Disponíveis
+### 6.2. Descrição dos Agentes
 
-| Tool | Função | Agentes que Usam |
-|------|--------|------------------|
-| `buscar_habilidades_bncc` | Busca semântica por habilidades BNCC | Interpretador, Criador |
-| `buscar_por_conceitos` | Busca por conceitos matemáticos específicos | Interpretador |
-| `salvar_gabarito_sessao` | Salva gabarito mestre no SQLite | Resolução |
-| `recuperar_gabarito_sessao` | Recupera gabarito de uma sessão | Correção |
+| Agente | Responsabilidade | Entrada | Saída |
+|--------|------------------|---------|-------|
+| **Interpretador** | Identifica habilidades BNCC na questão-exemplo usando RAG | Questão-exemplo (texto) | Habilidades BNCC identificadas + conceitos principais |
+| **Criador** | Gera 3 questões múltipla escolha baseadas nas habilidades | Habilidades BNCC + conceitos | 3 questões (enunciado + habilidades combinadas) |
+| **Resolução** | Resolve as questões de forma independente (sem acesso ao gabarito do criador) | 3 questões | Gabarito mestre (resposta final + passos + conceitos + erros comuns) |
+| **Distratores** | Gera 4 alternativas incorretas plausíveis para cada questão | Enunciado + resposta correta | 4 distratores plausíveis |
+| **Correção** | Compara respostas dos alunos com gabarito e gera relatório diagnóstico | Respostas alunos + gabarito mestre | Relatório diagnóstico detalhado |
 
-### 6.3. Fluxo de Tool Calling
+### 6.3. Validação Adversarial
 
-1. **Agente Interpretador**:
-   - Recebe questão original
-   - Chama `buscar_habilidades_bncc(questao_texto)`
-   - Pode chamar `buscar_por_conceitos([conceitos])` para refinamento
-   - Retorna habilidades BNCC identificadas
+A plataforma implementa um sistema de **validação adversarial** para garantir que as questões geradas sejam solucionáveis:
 
-2. **Agente Criador**:
-   - Recebe habilidades identificadas
-   - Pode chamar `buscar_habilidades_bncc()` para contexto adicional
-   - Gera 4 questões similares
+1. **Criador** gera questão + gabarito esperado (oculto do Resolver)
+2. **Resolver** tenta resolver a questão de forma independente
+3. **Validação** compara as respostas usando equivalência numérica/semântica
+4. **Aprovação**: Questão é aprovada apenas se Resolver conseguir chegar à resposta correta
 
-3. **Agente Resolução**:
-   - Resolve todas as questões passo a passo
-   - Chama `salvar_gabarito_sessao(session_id, gabarito)`
-   - Confirma salvamento no banco
+Isso garante que as questões sejam:
+- ✅ Solucionáveis com as informações fornecidas
+- ✅ Não ambíguas
+- ✅ Com nível de dificuldade adequado
 
-4. **Agente Correção**:
-   - Chama `recuperar_gabarito_sessao(session_id)`
-   - Compara com respostas do aluno
-   - Gera relatório diagnóstico
+### 6.4. Geração de Distratores
+
+O **Agente Distratores** utiliza uma estratégia de 3 camadas para gerar alternativas incorretas plausíveis:
+
+1. **Camada 1**: LLM gera distratores baseados em erros conceituais comuns
+2. **Camada 2**: Fallback estruturado com JSON schema
+3. **Camada 3**: Heurística numérica (perturbações de ±10%, ±20%, etc.) **preservando unidades**
+
+Exemplo:
+- Resposta correta: `93.75 km²`
+- Distratores gerados: `84.375 km²`, `103.125 km²`, `75.0 km²`, `112.5 km²`
 
 ---
 
@@ -421,39 +520,79 @@ rag.buscar_habilidades_avancada("probabilidade", {"unidade_tematica": "Estatíst
 
 ## 🧠 9. Como Funciona na Prática
 
-### Exemplo de Fluxo Completo
+### Exemplo de Fluxo Completo (Cursinho Popular)
 
-1. **Usuário envia**: Imagem de questão sobre função quadrática
-2. **OCR Mock**: Extrai texto da questão
-3. **Agente Interpretador**:
-   - Chama `buscar_habilidades_bncc("função quadrática vértice")`
-   - Identifica: `EM13MAT503` (pontos de máximo/mínimo)
-4. **Agente Criador**: Gera 4 questões similares sobre função quadrática
-5. **Agente Resolução**:
-   - Resolve as 4 questões passo a passo
-   - Chama `salvar_gabarito_sessao(session_id, gabarito)`
-6. **Retorna**: Lista de questões + session_id
+**Contexto**: Professor de um cursinho popular quer criar uma atividade diagnóstica sobre escalas e proporcionalidade.
 
-**Depois, quando o aluno submete respostas**:
+#### Passo 1: Criação da Atividade
 
-7. **Agente Correção**:
-   - Chama `recuperar_gabarito_sessao(session_id)`
-   - Compara respostas com gabarito
-   - Gera relatório diagnóstico personalizado
+1. **Professor envia**: Questão-exemplo sobre maquete e escala (ENEM 2011)
+2. **Agente Interpretador**:
+   - Busca no ChromaDB: `"escala maquete proporcionalidade área"`
+   - Identifica habilidades: `EF09MA08` (proporcionalidade), `EF09MA03` (operações com números reais)
+3. **Agente Criador**:
+   - Gera 3 questões múltipla escolha sobre escalas, volumes e áreas
+   - Combina 2-3 habilidades BNCC por questão
+4. **Agente Resolução**:
+   - Resolve as 3 questões de forma independente
+   - Gera gabarito com: resposta final, passos de resolução, conceitos aplicados, erros comuns
+5. **Validação Adversarial**:
+   - Compara resposta do Criador vs Resolver
+   - Aprova apenas questões solucionáveis
+6. **Agente Distratores**:
+   - Gera 4 alternativas incorretas plausíveis para cada questão
+   - Preserva unidades (km², m³, cm, etc.)
+   - Embaralha alternativas (A-E)
+7. **Retorna**: 3 questões com alternativas + `session_id`
+
+#### Passo 2: Aplicação com Alunos
+
+8. **Professor aplica**: Atividade com os alunos do cursinho
+9. **Alunos respondem**: Marcam alternativas A, B, C, D ou E
+10. **Professor submete**: Respostas dos alunos via API
+
+#### Passo 3: Relatório Diagnóstico
+
+11. **Agente Correção**:
+    - Recupera gabarito mestre do banco
+    - Compara respostas dos alunos
+    - Gera relatório com:
+      - **Métricas**: Total de questões, acertos, erros, taxa de acerto
+      - **Correção detalhada**: Feedback por questão, passos de resolução
+      - **Habilidades BNCC**: Desempenho por habilidade trabalhada
+      - **Recomendações**: Sugestões pedagógicas personalizadas
+12. **Professor recebe**: Relatório diagnóstico completo para orientar intervenções pedagógicas
 
 ---
 
-## 🎯 10. Benefícios da Arquitetura
+## 🎯 10. Benefícios para Cursinhos Populares
 
-Esta arquitetura garante:
+### 10.1. Benefícios Pedagógicos
+
+- ✅ **Diagnóstico Coletivo**: Relatórios detalhados sobre desempenho da turma por habilidade BNCC
+- ✅ **Personalização**: Questões adaptadas ao nível e contexto dos alunos
+- ✅ **Alinhamento BNCC**: Todas as questões mapeadas para habilidades da Base Nacional
+- ✅ **Feedback Detalhado**: Passos de resolução, conceitos aplicados e erros comuns
+- ✅ **Recomendações Pedagógicas**: Sugestões de intervenção baseadas no desempenho
+
+### 10.2. Benefícios Operacionais
+
+- ✅ **Redução de Carga Docente**: Automatiza criação de questões e correção
+- ✅ **Escalabilidade**: Atende múltiplas turmas e professores simultaneamente
+- ✅ **Acessibilidade**: Plataforma web, sem necessidade de instalação
+- ✅ **Custo Zero**: Tecnologia gratuita para instituições não-lucrativas
+- ✅ **Apoio a Voluntários**: Facilita trabalho de professores sem formação pedagógica formal
+
+### 10.3. Benefícios Técnicos
 
 - ✅ **Modularidade**: Cada agente tem responsabilidade única e bem definida
-- ✅ **Escalabilidade**: Fácil adicionar novos agentes ou ferramentas
+- ✅ **Escalabilidade**: Fácil adicionar novos agentes ou componentes
 - ✅ **Manutenibilidade**: Prompts separados do código facilitam ajustes
-- ✅ **Rastreabilidade**: Tool calling permite debug detalhado das decisões dos agentes
+- ✅ **Rastreabilidade**: Logs detalhados das decisões dos agentes
 - ✅ **Flexibilidade**: RAG permite consultas inteligentes à BNCC sem hardcoding
 - ✅ **Persistência**: Sistema de sessões permite uso assíncrono
 - ✅ **Testabilidade**: Componentes isolados facilitam testes unitários
+- ✅ **Validação**: Sistema adversarial garante qualidade das questões geradas
 
 ---
 
@@ -478,4 +617,21 @@ Esta arquitetura garante:
 
 ---
 
-**Desenvolvido com ❤️ para educação brasileira**
+## 🌟 Sobre o KORA
+
+**KORA** (Plataforma de Apoio Pedagógico para Cursinhos Populares) é uma iniciativa dedicada a democratizar o acesso a tecnologias educacionais avançadas para instituições não-lucrativas que atendem populações vulneráveis.
+
+### Público-Alvo
+
+- 🎓 **Cursinhos Populares**: Preparatórios comunitários para ENEM e vestibulares
+- 🏫 **Projetos de Extensão Universitária**: Iniciativas de apoio educacional
+- 👥 **Professores Voluntários**: Educadores que atuam em contextos de vulnerabilidade social
+- 📚 **Coordenadores Pedagógicos**: Gestores de programas educacionais não-lucrativos
+
+### Missão
+
+Fornecer ferramentas de diagnóstico pedagógico e apoio docente baseadas em IA para instituições que carecem de recursos tecnológicos, contribuindo para a redução de desigualdades educacionais no Brasil.
+
+---
+
+**Desenvolvido com ❤️ para a educação popular brasileira**

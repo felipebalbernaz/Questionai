@@ -27,8 +27,9 @@ class SessionSubmitRequest(BaseModel):
 class SessionStartResponse(BaseModel):
     """Response ao iniciar uma sessão"""
     session_id: str = Field(..., description="ID único da sessão")
-    lista_de_questoes: List[str] = Field(..., description="Lista de questões geradas")
-    
+    lista_de_questoes: List[str] = Field(..., description="Lista de questões geradas (strings)")
+    questoes_geradas: List[Dict] = Field(..., description="Lista de questões completas com alternativas")
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -37,6 +38,20 @@ class SessionStartResponse(BaseModel):
                     "1. Calcule o vértice da função f(x) = x² - 4x + 3",
                     "2. Determine o ponto de máximo da função g(x) = -2x² + 8x - 5",
                     "3. Encontre as coordenadas do vértice de h(x) = 3x² - 12x + 10"
+                ],
+                "questoes_geradas": [
+                    {
+                        "numero": 1,
+                        "enunciado": "Calcule o vértice da função f(x) = x² - 4x + 3",
+                        "habilidades_combinadas": ["EF09MA06", "EF09MA08"],
+                        "alternativas": {
+                            "A": "V(2, -1)",
+                            "B": "V(1, 0)",
+                            "C": "V(3, 0)",
+                            "D": "V(2, 1)",
+                            "E": "V(4, 3)"
+                        }
+                    }
                 ]
             }
         }
@@ -65,6 +80,7 @@ class RelatorioDiagnostico(BaseModel):
         ...,
         description="Habilidades BNCC que precisam ser revisadas"
     )
+    recomendacoes: str = Field(..., description="Recomendações pedagógicas personalizadas")
 
 
 class SessionSubmitResponse(BaseModel):

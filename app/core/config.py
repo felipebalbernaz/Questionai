@@ -15,18 +15,18 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = Field(
-        default="sqlite:///./bncc_gen.db",
+        default="sqlite:///./kora.db",
         description="URL de conexão do banco de dados"
     )
-    
+
     # ChromaDB
     CHROMA_PERSIST_DIRECTORY: str = Field(
         default="./chroma_db",
         description="Diretório de persistência do ChromaDB"
     )
-    
+
     # Aplicação
-    APP_NAME: str = Field(default="BNCC-Gen", description="Nome da aplicação")
+    APP_NAME: str = Field(default="KORA", description="Nome da aplicação")
     APP_VERSION: str = Field(default="1.0.0", description="Versão da aplicação")
     DEBUG: bool = Field(default=False, description="Modo debug")
     
