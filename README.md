@@ -6,6 +6,62 @@ A plataforma atende instituições não-lucrativas que frequentemente carecem de
 
 ---
 
+## ⚡ Início Rápido
+
+### 1. Instalar Dependências
+
+```bash
+# Backend
+pip install -r requirements.txt
+
+# Frontend
+cd frontend
+npm install
+cd ..
+```
+
+### 2. Configurar Variáveis de Ambiente
+
+**Backend** - Crie `.env` na raiz:
+```bash
+GOOGLE_API_KEY=sua_chave_aqui
+LLM_PROVIDER=google
+LLM_MODEL=gemini-2.5-flash
+```
+
+**Frontend** - Crie `frontend/.env`:
+```bash
+VITE_BACKEND_URL=http://127.0.0.1:8000
+```
+
+### 3. Ingerir Base BNCC
+
+```bash
+python scripts/ingest_bncc.py
+```
+
+### 4. Executar
+
+**Terminal 1 - Backend:**
+```bash
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+**Terminal 2 - Frontend (Recomendado):**
+```bash
+cd frontend
+npm run dev
+# Acesse: http://localhost:5173
+```
+
+**OU Terminal 2 - Streamlit (Teste Rápido):**
+```bash
+streamlit run streamlit_app.py --server.port 8501
+# Acesse: http://localhost:8501
+```
+
+---
+
 ## 📑 Índice
 
 1. [Visão Geral e Arquitetura](#-1-visão-geral-e-arquitetura)
@@ -117,12 +173,43 @@ cora/
 │   ├── chroma.sqlite3
 │   └── ...
 │
-├── streamlit_app.py             # 🎨 Interface Streamlit para testes
+├── frontend/                    # 🎨 Frontend React (Interface Principal)
+│   ├── src/
+│   │   ├── components/          # Componentes shadcn/ui
+│   │   ├── pages/
+│   │   │   ├── Home.tsx         # Página inicial
+│   │   │   ├── StudentFlow.tsx  # Fluxo do aluno (3 passos)
+│   │   │   └── TeacherDashboard.tsx
+│   │   ├── utils/
+│   │   │   ├── api.ts           # Integração com backend
+│   │   │   └── types.ts         # TypeScript types
+│   │   └── App.tsx
+│   ├── package.json
+│   ├── .env.example
+│   └── INTEGRATION.md           # Guia de integração
+│
+├── streamlit_app.py             # 🧪 Interface Streamlit (Teste Rápido)
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
+
+### Interfaces Disponíveis
+
+**KORA** oferece duas interfaces:
+
+1. **Frontend React** (`frontend/`) - **Recomendado para produção**
+   - Interface moderna e responsiva
+   - Componentes UI profissionais (shadcn/ui)
+   - Área do Aluno e Área do Professor
+   - Integração completa com a API
+
+2. **Streamlit** (`streamlit_app.py`) - **Ideal para testes rápidos**
+   - Interface simples e funcional
+   - Não requer instalação de dependências Node.js
+   - Perfeito para desenvolvimento e demonstrações
+   - Execução com um único comando
 
 ## 🛠️ 3. Configuração e Instalação
 
@@ -191,9 +278,50 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 **Servidor rodando em**: `http://127.0.0.1:8000`
 **Documentação interativa**: `http://127.0.0.1:8000/docs`
 
-### 4.2. Interface Streamlit (Opcional)
+### 4.2. Frontend React (Interface Principal)
 
-Para testar a plataforma com interface gráfica:
+O frontend é uma aplicação **React + TypeScript + Vite** com componentes **shadcn/ui**.
+
+#### Instalação
+
+```bash
+cd frontend
+npm install
+```
+
+#### Configuração
+
+Crie um arquivo `.env` em `frontend/`:
+
+```bash
+VITE_BACKEND_URL=http://127.0.0.1:8000
+```
+
+#### Executar
+
+```bash
+npm run dev
+```
+
+**Interface rodando em**: `http://localhost:5173`
+
+O frontend oferece:
+- ✅ **Área do Aluno**: Fluxo completo de 3 passos (colar questão → responder → ver relatório)
+- ✅ **Área do Professor**: Dashboard de acompanhamento (em desenvolvimento)
+- ✅ **Interface moderna**: Componentes UI responsivos e acessíveis
+- ✅ **Integração completa**: Chamadas reais à API FastAPI
+
+#### Build para Produção
+
+```bash
+cd frontend
+npm run build
+npm run preview
+```
+
+### 4.3. Interface Streamlit (Teste Rápido)
+
+Para testar a plataforma rapidamente sem configurar o frontend React:
 
 ```bash
 streamlit run streamlit_app.py --server.port 8501
@@ -206,6 +334,8 @@ A interface Streamlit permite:
 - ✅ Visualizar as 3 questões geradas com alternativas A-E
 - ✅ Simular respostas de alunos
 - ✅ Visualizar relatórios diagnósticos detalhados
+
+> **Nota:** O Streamlit é ideal para testes rápidos e desenvolvimento. Para uso em produção, utilize o frontend React.
 
 ---
 
@@ -596,13 +726,34 @@ rag.buscar_habilidades_avancada("probabilidade", {"unidade_tematica": "Estatíst
 
 ---
 
-## 📚 Referências e Recursos
+## 📚 Documentação Adicional
+
+### Guias de Integração
+
+- **`frontend/INTEGRATION.md`** - Guia completo de integração Frontend ↔ Backend
+  - Endpoints mapeados
+  - Compatibilidade de schemas
+  - Troubleshooting
+  - Exemplos de request/response
+
+### Scripts de Teste
+
+- **`scripts/test_frontend_integration.py`** - Teste automatizado da integração
+  - Verifica saúde do backend
+  - Testa endpoint `/start` (geração de questões)
+  - Testa endpoint `/submit` (submissão de respostas)
+  - Valida CORS
+
+### Referências Técnicas
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [LangChain Documentation](https://python.langchain.com/)
 - [ChromaDB Documentation](https://docs.trychroma.com/)
+- [React Documentation](https://react.dev/)
+- [shadcn/ui Components](https://ui.shadcn.com/)
 - [BNCC - Base Nacional Comum Curricular](http://basenacionalcomum.mec.gov.br/)
 
+---
 
 ## 🌟 Sobre o KORA
 

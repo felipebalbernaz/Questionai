@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Download } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, GraduationCap, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { iniciarSessao, submeterRespostas } from "@/utils/api";
 import type { Questao, Relatorio } from "@/utils/types";
@@ -73,7 +73,7 @@ const StudentFlow = () => {
   const downloadReport = () => {
     const dataStr = JSON.stringify(relatorio, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = 'relatorio.json';
+    const exportFileDefaultName = 'raio-x-kora.json';
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -82,13 +82,18 @@ const StudentFlow = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-background sticky top-0 z-50">
+      <header className="border-b bg-white sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/")}>
+          <Button variant="ghost" onClick={() => navigate("/student")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
-          <h1 className="text-xl font-bold">KORA - Área do Aluno</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <GraduationCap className="h-5 w-5 text-white" />
+            </div>
+            <h1 className="text-xl font-bold">Kora - Prática Inteligente</h1>
+          </div>
           <Button variant="outline" onClick={resetSession}>Nova Sessão</Button>
         </div>
       </header>
@@ -99,7 +104,7 @@ const StudentFlow = () => {
           <div className="flex justify-between mt-2 text-sm text-muted-foreground">
             <span className={step >= 1 ? "text-primary font-semibold" : ""}>1. Cole a Questão</span>
             <span className={step >= 2 ? "text-primary font-semibold" : ""}>2. Responda</span>
-            <span className={step >= 3 ? "text-primary font-semibold" : ""}>3. Relatório</span>
+            <span className={step >= 3 ? "text-primary font-semibold" : ""}>3. Raio-X</span>
           </div>
         </div>
 
@@ -176,23 +181,27 @@ const StudentFlow = () => {
 
         {step === 3 && relatorio && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Passo 3: Seu Relatório</CardTitle>
+            <Card className="border-2 border-primary/20">
+              <CardHeader className="bg-primary/5">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-6 w-6 text-primary" />
+                  <CardTitle className="text-2xl">Passo 3: Seu Raio-X</CardTitle>
+                </div>
+                <CardDescription>Análise completa do seu desempenho</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-4 bg-secondary rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">{relatorio.total_questoes}</p>
-                    <p className="text-sm text-muted-foreground">Total</p>
+                  <div className="text-center p-4 bg-secondary rounded-xl border border-border">
+                    <p className="text-3xl font-bold text-foreground">{relatorio.total_questoes}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Total</p>
                   </div>
-                  <div className="text-center p-4 bg-secondary rounded-lg">
-                    <p className="text-2xl font-bold text-primary">{relatorio.total_acertos}</p>
-                    <p className="text-sm text-muted-foreground">Acertos</p>
+                  <div className="text-center p-4 bg-primary/10 rounded-xl border border-primary/20">
+                    <p className="text-3xl font-bold text-primary">{relatorio.total_acertos}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Acertos</p>
                   </div>
-                  <div className="text-center p-4 bg-secondary rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">{relatorio.percentual_acerto.toFixed(1)}%</p>
-                    <p className="text-sm text-muted-foreground">Aproveitamento</p>
+                  <div className="text-center p-4 bg-secondary rounded-xl border border-border">
+                    <p className="text-3xl font-bold text-foreground">{relatorio.percentual_acerto.toFixed(1)}%</p>
+                    <p className="text-sm text-muted-foreground mt-1">Aproveitamento</p>
                   </div>
                 </div>
 
@@ -225,8 +234,10 @@ const StudentFlow = () => {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-secondary rounded-lg">
-                    <h3 className="font-semibold mb-2">Habilidades a Revisar</h3>
+                  <div className="p-4 bg-secondary rounded-xl border border-border">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      📚 Habilidades BNCC a Revisar
+                    </h3>
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                       {relatorio.habilidades_a_revisar.map((hab, idx) => (
                         <li key={idx}>{hab}</li>
@@ -234,19 +245,21 @@ const StudentFlow = () => {
                     </ul>
                   </div>
 
-                  <div className="p-4 bg-secondary rounded-lg">
-                    <h3 className="font-semibold mb-2">Recomendações</h3>
-                    <p className="text-muted-foreground">{relatorio.recomendacoes}</p>
+                  <div className="p-4 bg-primary/5 rounded-xl border-l-4 border-primary">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      💡 Recomendações Pedagógicas
+                    </h3>
+                    <p className="text-muted-foreground leading-relaxed">{relatorio.recomendacoes}</p>
                   </div>
                 </div>
 
                 <div className="flex gap-4 mt-6">
-                  <Button onClick={downloadReport} variant="outline" className="flex-1">
+                  <Button onClick={downloadReport} variant="outline" className="flex-1" size="lg">
                     <Download className="mr-2 h-4 w-4" />
-                    Baixar JSON
+                    Baixar Raio-X (JSON)
                   </Button>
-                  <Button onClick={resetSession} className="flex-1">
-                    Nova Sessão
+                  <Button onClick={resetSession} className="flex-1" size="lg">
+                    Nova Prática
                   </Button>
                 </div>
               </CardContent>
