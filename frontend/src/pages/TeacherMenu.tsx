@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, BarChart3, BookOpen, FileText, GraduationCap, Library, PenTool } from "lucide-react";
+import { ArrowLeft, BarChart3, FileText, GraduationCap, Library, PenTool } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const TeacherMenu = () => {
@@ -17,7 +17,7 @@ const TeacherMenu = () => {
     },
     {
       title: "Banco de Questões",
-      description: "Visualize e avalie questões geradas pelos alunos",
+      description: "Visualize e avalie questões geradas pelos alunos       ",
       icon: Library,
       path: "/teacher/banco-questoes",
       color: "bg-purple-500",
@@ -25,15 +25,15 @@ const TeacherMenu = () => {
     },
     {
       title: "Gerador",
-      description: "Crie questões personalizadas e simulados completos",
+      description: "Crie questões personalizadas e simulados completos     ",
       icon: PenTool,
       path: "/teacher/gerar-questoes",
       color: "bg-green-500",
       badge: null
     },
     {
-      title: " Gerenciar Simulados",
-      description: "Gerencie simulados e atribua às turmas",
+      title: "Gerenciar Simulados",
+      description: "Gerencie simulados e atribua às turmas                 ",
       icon: FileText,
       path: "/teacher/simulados",
       color: "bg-orange-500",
@@ -67,16 +67,16 @@ const TeacherMenu = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
           {menuItems.map((item, idx) => {
             const Icon = item.icon;
             return (
-              <Card 
-                key={idx} 
-                className="hover:shadow-xl transition-all cursor-pointer border-2 hover:border-primary/50 group"
+              <Card
+                key={idx}
+                className="hover:shadow-xl transition-all cursor-pointer border-2 hover:border-primary/50 group flex flex-col"
                 onClick={() => navigate(item.path)}
               >
-                <CardHeader>
+                <CardHeader className="flex-1">
                   <div className="flex items-start justify-between mb-4">
                     <div className={`w-14 h-14 ${item.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
                       <Icon className="h-7 w-7 text-white" />
@@ -88,7 +88,7 @@ const TeacherMenu = () => {
                     )}
                   </div>
                   <CardTitle className="text-xl mb-2">{item.title}</CardTitle>
-                  <CardDescription className="text-base">
+                  <CardDescription className="text-base min-h-[3rem]">
                     {item.description}
                   </CardDescription>
                 </CardHeader>
